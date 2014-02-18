@@ -20,5 +20,8 @@
   "bugs": {
     "url": "https://github.com/shamangeorge/mapreducejs/issues"
   },
-  "homepage": "https://github.com/shamangeorge/mapreducejs"
+  "homepage": "https://github.com/shamangeorge/mapreducejs",
+  "devDependencies": {
+    "socket.io": "~0.9.16"
+  }
 }
