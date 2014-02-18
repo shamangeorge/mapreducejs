@@ -1,27 +1,27 @@
 {
-  "name": "mapreducejs",
-  "version": "0.0.0",
-  "description": "map reduce in js, proof of concept",
-  "main": "server.js",
-  "scripts": {
-    "test": "test"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git@github.com:shamangeorge/mapreducejs.git"
-  },
-  "keywords": [
-    "mapreduce",
-    "js",
-    "d3"
-  ],
-  "author": "shamangeorge",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/shamangeorge/mapreducejs/issues"
-  },
-  "homepage": "https://github.com/shamangeorge/mapreducejs",
-  "devDependencies": {
-    "socket.io": "~0.9.16"
-  }
+    "name": "mapreducejs",
+    "version": "0.0.0",
+    "description": "map reduce in js, proof of concept",
+    "main": "server.js",
+    "scripts": {
+        "test": "test"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git@github.com:shamangeorge/mapreducejs.git"
+    },
+    "keywords": [
+        "mapreduce",
+        "js",
+        "d3"
+    ],
+    "author": "shamangeorge",
+    "license": "MIT",
+    "bugs": {
+        "url": "https://github.com/shamangeorge/mapreducejs/issues"
+    },
+    "homepage": "https://github.com/shamangeorge/mapreducejs",
+    "devDependencies": {
+        "socket.io": "~0.9.16"
+    }
 }

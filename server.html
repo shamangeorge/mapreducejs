@@ -1,0 +1,496 @@
+<!Doctype html>
+<html>
+
+<head>
+    <title>MapReduce Visuals</title>
+    <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+    header {
+        text-align: center;
+        margin-right: auto;
+        margin-left:auto;
+        width:700px;
+    }
+    article {
+        padding:15px;
+        margin:15px;
+        border-top:2px dashed black;
+        height:300px;
+        overflow: hidden;
+        margin-right: auto;
+        margin-left:auto;
+        width:700px;
+    }
+    #main {
+        margin-right: auto;
+        margin-left:auto;
+        width:700px;
+    }
+    .link {
+        stroke: gray;
+        stroke-width: 1.5px;
+    }
+    .node {
+        fill: #66CC66;
+        stroke: #000;
+        stroke-width: 1px;
+    }
+    #graph {
+        position:absolute;
+        top:0px;
+        left: 0px;
+    }
+    .node:hover {
+        fill: red;
+        color:red;
+    }
+    #visual_controls {
+        position:absolute;
+        z-index: 999;
+        top: 0px;
+        left:0px;
+    }
+    #button_controls {
+        position:absolute;
+        top:80px;
+        left:0px;
+        z-index: 999;
+    }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Map Reduce in Visual Form Serverside</h1>
+    </header>
+    <section id='graph'>
+    </section>
+    <section id='main'>
+        <h3>
+            <center>MapReduce WordCount</center>
+        </h3>
+        <p></p>
+        <article id="input">Hello</article>
+        <br>
+        <article id="mapout"></article>
+        <br>
+        <article id="ssortout"></article>
+        <br>
+        <article id="reduceout"></article>
+        <br>
+        <aside id='button_controls'>
+            <button id="map">Run Mapper</button>
+            <br>
+            <button id="sort" hidden="">Shuffle and Sort</button>
+            <br>
+            <button id="reduce" hidden="">Run Reducer</button>
+            <br>
+            <button id="gen_viz">Generate Visuals</button>
+            <br>
+            <button id="runAll">Run All</button>
+            <br>
+            <button id="restart">New Problem</button>
+            <br>
+            <button id='stop'>Stop worker</button>
+            <br>
+            <button id='reWork'>Restart worker</button>
+            <br>
+            <div id="waiting">
+                Running Mapreduce jobs, please Wait....
+                <img width='70px' height='50px' src="http://media.getmein.com/Images/wait.gif" alt="Searching" />
+            </div>
+        </aside>
+    </section>
+    <section id='visual_controls'>
+        <form>
+            Layout:
+            <label>
+                <input type="radio" name="layout" value="default" checked>Default</label>
+            <label>
+                <input type="radio" name="layout" value="radial">Radial</label>
+            <label>
+                <input type="radio" name="layout" value="line">Line</label>
+            <label>
+                <input type="radio" name="layout" value="line_cat">Line by Category</label>
+        </form>
+        <form>
+            Color:
+            <label>
+                <input type="radio" name="color" value="nocolor" checked>None</label>
+            <label>
+                <input type="radio" name="color" value="color_cat">Category</label>
+        </form>
+        <form>
+            Size:
+            <label>
+                <input type="radio" name="size" value="nosize" checked>None</label>
+            <label>
+                <input type="radio" name="size" value="size_cat">Category</label>
+        </form>
+    </section>
+</body>
+<script type="text/javascript">
+var ui = {
+    buttons: {
+        map: document.getElementById('map'),
+        shuffle: document.getElementById('sort'),
+        red: document.getElementById('reduce'),
+        restart: document.getElementById('restart'),
+        all: document.getElementById('runAll'),
+        unknown: document.getElementById('unknown'),
+        stop: document.getElementById('stop'),
+        visMe: document.getElementById('gen_viz'),
+        reWork: document.getElementById('reWork'),
+    },
+    output: {
+        map: document.getElementById('mapout'),
+        shuffle: document.getElementById('ssortout'),
+        red: document.getElementById('reduceout'),
+    },
+    input: document.getElementById('input'),
+    fb: {
+        wait: document.getElementById('waiting'),
+    }
+};
+var input = init();
+var mapOut;
+var ssOut;
+var redOut;
+var rFlag = false;
+var MAX_NODES = 1700;
+var socket;
+var socketOFF = true;
+var address = 'http://athena.mirkwood:8000'
+ui.buttons.reWork.addEventListener('click', MapReduce, false);
+MapReduce();
+
+function MapReduce() {
+    ui.fb.wait.style.display = 'none';
+    if (socketOFF) {
+        socket_connect()
+    } else {
+        socket_reconnect()
+    }
+    ui.buttons.map.addEventListener('click', mapper, false);
+    ui.buttons.shuffle.addEventListener('click', ssort, false);
+    ui.buttons.red.addEventListener('click', reducer, false);
+    ui.buttons.restart.addEventListener('click', reInit, false);
+    ui.buttons.all.addEventListener('click', runAll, false);
+    ui.buttons.stop.addEventListener('click', stop, false);
+    ui.buttons.visMe.addEventListener('click', visMe, false);
+    socket.on('news', function(data) {
+        console.log(data);
+        socket.emit('my other event', {
+            my: 'data'
+        });
+    });
+
+    socket.on('map', function(data) {
+        ui.fb.wait.style.display = 'none';
+        ui.buttons.shuffle.hidden = false;
+        mapOut = data.map;
+        ui.output.map.innerHTML = data.txt;
+    })
+    socket.on('sort', function(data) {
+        ui.fb.wait.style.display = 'none';
+        ui.buttons.red.hidden = false;
+        ssOut = data.map;
+        ui.output.shuffle.innerHTML = data.txt;
+    })
+    socket.on('reduce', function(data) {
+        ui.fb.wait.style.display = 'none';
+        redOut = data.map;
+        ui.output.red.innerHTML = data.txt;
+    })
+
+    socket.on('mapreduce', function(data) {
+        ui.fb.wait.style.display = 'none';
+        redOut = data.map;
+        ui.output.red.innerHTML = data.txt;
+        if (data.map.length < MAX_NODES) {
+            visualizeMe();
+        }
+    })
+}
+
+function socket_connect() {
+    console.log('func socket_connect');
+    socket = io.connect(address);
+    socketOFF = false;
+}
+
+function socket_reconnect() {
+    console.log('func socket_reconnect');
+    socket.socket.reconnect();
+    socketOFF = false;
+}
+
+function socket_disconnect() {
+    console.log('func socket_disconnect');
+    if (socket) socket.disconnect();
+    socketOFF = true;
+}
+
+function readFile(path) {
+    var request = new XMLHttpRequest();
+    request.open("GET", path, false);
+    request.send(null);
+    var returnValue = request.responseText;
+    return returnValue;
+};
+
+function init() {
+    var text = "";
+    text = readFile('./AV1611Bible.txt');
+    ui.input.innerHTML = text;
+    ui.buttons.shuffle.hidden = true;
+    ui.buttons.red.hidden = true;
+    return text;
+}
+
+function reInit(e) {
+    input = init();
+    d3.select("svg").remove();
+    ui.output.map.innerHTML = '';
+    ui.output.shuffle.innerHTML = '';
+    ui.output.red.innerHTML = '';
+}
+
+function visMe(e) {
+    if (rFlag && redOut.val.length < MAX_NODES) {
+        visualizeMe();
+    } else {
+        ui.output.red.innerHTML = '<span style="color:red;">We are sorry there seems to be a problem...<br> Either You have not run the whole map reduce program yet, or your input is too big for visualization and your UI would crash. <br>You can still view the text output for large files. <br>You may wish to make your file smaller or if you wish to be adventurous you can change the variable MAX_NODES in the source and see where that takes you.</span>';
+    }
+}
+
+function mapper(e) {
+    ui.fb.wait.style.display = 'block';
+    ui.output.red.innerHTML = '';
+    socket.emit('map', {
+        msg: input
+    })
+}
+
+function ssort(e) {
+    ui.fb.wait.style.display = 'block';
+    socket.emit('sort', {
+        msg: mapOut
+    })
+}
+
+function reducer(e) {
+    ui.fb.wait.style.display = 'block';
+    socket.emit('reduce', {
+        msg: ssOut
+    })
+}
+
+function runAll(e) {
+    ui.fb.wait.style.display = 'block';
+    socket.emit('mapreduce', {
+        msg: input
+    })
+};
+
+function stop(e) {
+    ui.fb.wait.style.display = 'none';
+    socket_disconnect();
+    ui.output.red.innerHTML = 'Disconnecting';
+    ui.buttons.map.removeEventListener('click', mapper, false);
+    ui.buttons.shuffle.removeEventListener('click', ssort, false);
+    ui.buttons.red.removeEventListener('click', reducer, false);
+    ui.buttons.restart.removeEventListener('click', reInit, false);
+    ui.buttons.all.removeEventListener('click', runAll, false);
+    ui.buttons.stop.removeEventListener('click', stop, false);
+    ui.buttons.visMe.removeEventListener('click', visMe, false);
+    input = init();
+    d3.select("svg").remove();
+    ui.output.map.innerHTML = '';
+    ui.output.shuffle.innerHTML = '';
+}
+
+function visualizeMe() {
+    d3.select("svg").remove();
+    var MAX = Math.max.apply(Math, redOut.val);
+    var width = window.innerWidth,
+        height = window.innerHeight;
+    var tTime = 2500;
+    var svg = d3.select("#graph").append("svg")
+        .attr("width", width)
+        .attr("height", height)
+
+    var fill = d3.scale.category10();
+
+    var graph = {
+        nodes: [],
+        links: []
+    };
+
+    var nb_nodes = redOut.val.length,
+        nb_cat = 10;
+
+    graph.nodes = d3.range(nb_nodes).map(function(i) {
+        return {
+            cat: Math.floor(nb_cat * Math.random()),
+            str: redOut.key[i],
+            freq: redOut.val[i],
+
+        };
+    })
+
+    graph.nodes.map(function(d, i) {
+
+        graph.nodes.map(function(e, j) {
+            if (Math.random() > .99 && i != j)
+                graph.links.push({
+                    "source": i,
+                    "target": j
+                })
+
+        })
+    })
+
+    function newMap(x, min, max, a, b) {
+        return (b - a) * (x - min) / (max - min) + a;
+    }
+
+    function tick(d) {
+
+        graph_update(0);
+    }
+
+    function default_layout() {
+
+        graph.nodes.forEach(function(d, i) {
+            d.x = newMap(i, 0, redOut.val.length, 0, width);
+            d.y = height - newMap(d.freq, 0, MAX, 0, height);
+        })
+        graph_update(tTime);
+    }
+
+    function line_layout() {
+
+        graph.nodes.forEach(function(d, i) {
+            d.x = newMap(d.freq, 0, MAX, 0, width);
+            d.y = newMap(i, 0, redOut.val.length, 0, height);
+        })
+
+        graph_update(tTime);
+    }
+
+    function line_cat_layout() {
+
+        graph.nodes.forEach(function(d, i) {
+            d.x = newMap(i, 0, redOut.val.length, 0, width);
+            d.y = height / 2 + newMap(d.freq, 0, MAX, 0, height / 2);
+        })
+
+        graph_update(tTime);
+    }
+
+    function radial_layout() {
+
+        var r = height / 2;
+
+        var arc = d3.svg.arc()
+            .outerRadius(r);
+
+        var pie = d3.layout.pie()
+            .sort(function(a, b) {
+                return a.cat - b.cat;
+            })
+            .value(function(d, i) {
+                return 1;
+            }); // equal share for each point
+
+        graph.nodes = pie(graph.nodes).map(function(d, i) {
+            d.innerRadius = 0;
+            d.outerRadius = r;
+            d.data.x = arc.centroid(d)[0] + width / 2;
+            d.data.y = arc.centroid(d)[1] + height / 2;
+            d.data.endAngle = d.endAngle;
+            d.data.startAngle = d.startAngle;
+            return d.data;
+        })
+
+        graph_update(tTime);
+    }
+
+    function category_color() {
+        d3.selectAll("circle").transition().duration(tTime).style("fill", function(d) {
+            return fill(newMap(d.freq, 0, MAX, 0, 255));
+        });
+    }
+
+    function category_size() {
+        d3.selectAll("circle").transition().duration(tTime).attr("r", function(d) {
+            return newMap(d.freq, 0, MAX, 0, height / 2);
+        });
+    }
+
+    function graph_update(delay) {
+
+        link.transition().duration(delay)
+            .attr("x1", function(d) {
+                return d.target.x;
+            })
+            .attr("y1", function(d) {
+                return d.target.y;
+            })
+            .attr("x2", function(d) {
+                return d.source.x;
+            })
+            .attr("y2", function(d) {
+                return d.source.y;
+            });
+
+        node.transition().duration(delay)
+            .attr("transform", function(d) {
+                return "translate(" + d.x + "," + d.y + ")";
+            });
+    }
+
+    d3.select("input[value=\"default\"]").on("click", default_layout);
+    d3.select("input[value=\"line\"]").on("click", line_layout);
+    d3.select("input[value=\"line_cat\"]").on("click", line_cat_layout);
+    d3.select("input[value=\"radial\"]").on("click", radial_layout);
+
+    d3.select("input[value=\"nocolor\"]").on("click", function() {
+        d3.selectAll("circle").transition().duration(tTime).style("fill", "#66CC66");
+    })
+
+    d3.select("input[value=\"color_cat\"]").on("click", category_color);
+
+    d3.select("input[value=\"nosize\"]").on("click", function() {
+        d3.selectAll("circle").transition().duration(tTime).attr("r", 5);
+    })
+
+    d3.select("input[value=\"size_cat\"]").on("click", category_size);
+
+    var link = svg.selectAll(".link")
+        .data(graph.links)
+        .enter().append("line")
+        .attr("class", "link")
+
+    var node = svg.selectAll(".node")
+        .data(graph.nodes)
+        .enter()
+        .append("g").attr("class", "node");
+
+    node.append("circle")
+        .attr("r", function(i) {
+            return 5;
+        })
+    node.append("svg:title")
+        .text(function(i) {
+            return i.str;
+        })
+
+    default_layout();
+
+};
+</script>
+
+</html>
