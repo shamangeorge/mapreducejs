@@ -1,0 +1,136 @@
+<!Doctype html>
+<html>
+
+<head>
+    <title>MapReduce Visuals</title>
+    <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+    <style>
+    header {
+        text-align: center;
+        margin-right: auto;
+        margin-left:auto;
+        width:700px;
+    }
+    article {
+        padding:15px;
+        margin:15px;
+        border-top:2px dashed black;
+        height:100px;
+        overflow: hidden;
+        margin-right: auto;
+        margin-left:auto;
+        width:700px;
+    }
+    #main {
+        margin-right: auto;
+        margin-left:auto;
+        width:700px;
+    }
+    .link {
+        stroke: gray;
+        stroke-width: 1.5px;
+    }
+    .node {
+        fill: #66CC66;
+        stroke: #000;
+        stroke-width: 1px;
+    }
+    #graph {
+        position:absolute;
+        top:0px;
+        left: 0px;
+    }
+    .node:hover {
+        fill: red;
+        color:red;
+    }
+    #visual_controls {
+        position:absolute;
+        z-index: 999;
+        top: 0px;
+        left:0px;
+    }
+    #button_controls {
+        position:absolute;
+        top:80px;
+        left:0px;
+        z-index: 999;
+    }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Map Reduce in Visual Form</h1>
+    </header>
+    <section id='graph'>
+    </section>
+    <section id='main'>
+        <h3>
+            <center>MapReduce WordCount</center>
+        </h3>
+        <p></p>
+        <article id="input">Hello</article>
+        <br>
+        <article id="mapout"></article>
+        <br>
+        <article id="ssortout"></article>
+        <br>
+        <article id="reduceout"></article>
+        <br>
+        <aside id='button_controls'>
+            <button id="map">Run Mapper</button>
+            <br>
+            <button id="sort" hidden="">Shuffle and Sort</button>
+            <br>
+            <button id="reduce" hidden="">Run Reducer</button>
+            <br>
+            <button id="gen_viz">Generate Visuals</button>
+            <br>
+            <button id="runAll">Run All</button>
+            <br>
+            <button id="restart">New Problem</button>
+            <br>
+            <button id='unknown'>Send unknown command</button>
+            <br>
+            <button id='stop'>Stop worker</button>
+            <br>
+            <button id='reWork'>Restart worker</button>
+            <br>
+            <div id="waiting">
+                Running Mapreduce jobs, please Wait....
+                <img width='70px' height='50px' src="http://media.getmein.com/Images/wait.gif" alt="Searching" />
+            </div>
+        </aside>
+    </section>
+    <section id='visual_controls'>
+        <form>
+            Layout:
+            <label>
+                <input type="radio" name="layout" value="default" checked>Default</label>
+            <label>
+                <input type="radio" name="layout" value="radial">Radial</label>
+            <label>
+                <input type="radio" name="layout" value="line">Line</label>
+            <label>
+                <input type="radio" name="layout" value="line_cat">Line by Category</label>
+        </form>
+        <form>
+            Color:
+            <label>
+                <input type="radio" name="color" value="nocolor" checked>None</label>
+            <label>
+                <input type="radio" name="color" value="color_cat">Category</label>
+        </form>
+        <form>
+            Size:
+            <label>
+                <input type="radio" name="size" value="nosize" checked>None</label>
+            <label>
+                <input type="radio" name="size" value="size_cat">Category</label>
+        </form>
+    </section>
+</body>
+<script type="text/javascript" src="./js/main.js"></script>
+
+</html>
